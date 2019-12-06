@@ -2,7 +2,6 @@ package com.yuong.flowlayout;
 
 import android.content.Context;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -38,42 +37,26 @@ public class FlowLayout extends ViewGroup {
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         int widthSize = MeasureSpec.getSize(widthMeasureSpec);
-        int heightSize = MeasureSpec.getSize(heightMeasureSpec);
-        int widthMode = MeasureSpec.getMode(widthMeasureSpec);
-        int heightMode = MeasureSpec.getMode(heightMeasureSpec);
-        int width = 0, height = 0;
+        int height = 0;
         int childCount = getChildCount();
         int lineWidth = 0;
         int lineHeight = 0;
-
         for (int i = 0; i < childCount; i++) {
             View child = getChildAt(i);
-            //注意如果是GONE的话不参与运算
             if (child.getVisibility() == GONE) {
                 continue;
             }
-            //没这样算的话，不会计算padding
-//            int parentwidthMeasureSpec = MeasureSpec.makeMeasureSpec(widthSize - getPaddingLeft() - getPaddingRight(), widthMode);
-//            int parentheightMeasureSpec = MeasureSpec.makeMeasureSpec(heightSize - getPaddingTop() - getPaddingBottom(), heightMode);
-//             注意这里，是measureChild，我自己写成了child.measure(widthMeasureSpec, heightMeasureSpec);找了半天bug，他们的区别
-//            measureChild(child, parentwidthMeasureSpec, parentheightMeasureSpec);
-
-//            int parentwidthMeasureSpec = MeasureSpec.makeMeasureSpec(widthSize, widthMode);
-//            int parentheightMeasureSpec = MeasureSpec.makeMeasureSpec(heightSize, heightMode);
             measureChild(child, widthMeasureSpec, heightMeasureSpec);
 
             MarginLayoutParams mp = (MarginLayoutParams) child.getLayoutParams();
             int childWidth = child.getMeasuredWidth() + mp.leftMargin + mp.rightMargin;
             int childHeight = child.getMeasuredHeight() + mp.topMargin + mp.bottomMargin;
             int parentWidth = widthSize - getPaddingLeft() - getPaddingRight();
-            Log.e("FlowLayout", "parentWidth : " + parentWidth + "   childWidth : " + childWidth);
             //需要换行
-            if (lineWidth + childWidth > parentWidth) {
-                Log.e("FlowLayout onMeasure", "onMeasure : " + 1);
-                width = Math.max(lineWidth, width);
+            if (lineWidth + childWidth > parentWidth || lineWidth + childWidth + columnSpace > parentWidth) {
                 lineWidth = childWidth;
                 //防止第一个view就已经占满一行，这样无端多计算了个lineSpace的高度
-                if (height > 0) {
+                if (lineHeight > 0) {
                     height = height + lineHeight + lineSpace;
                 } else {
                     height = height + lineHeight;
@@ -81,29 +64,13 @@ public class FlowLayout extends ViewGroup {
                 lineHeight = childHeight;
             } else {
                 lineHeight = Math.max(lineHeight, childHeight);
-                Log.e("FlowLayout onMeasure", "onMeasure : " + 2);
-                if (childWidth == parentWidth) {
-                    lineWidth = childWidth;
-                    Log.e("FlowLayout onMeasure", "onMeasure : " + 3);
-                } else if (lineWidth + childWidth == parentWidth) {
-                    Log.e("FlowLayout onMeasure", "onMeasure : " + 4);
-                    lineWidth = lineWidth + childWidth;
-                } else {
-                    Log.e("FlowLayout onMeasure", "onMeasure : " + 5);
-                    lineWidth = lineWidth + childWidth + columnSpace;
-                }
-            }
+                lineWidth = lineWidth + childWidth + columnSpace;
 
-            //注意这里最后一次的时候，上面的lineHeight还没有累积，width还没有重新计算
-//            if (i == childCount - 1) {
-//                width = Math.max(width, lineWidth);
-//                height += lineHeight;//注意这里不需要再加lineSpace了，因为最后一行下面没有行间距了
-//            }
+            }
             if (i == childCount - 1) {
                 height += lineHeight;
             }
         }
-//        setMeasuredDimension(width + getPaddingLeft() + getPaddingRight(), height + getPaddingTop() + getPaddingBottom());
         setMeasuredDimension(widthSize, height + getPaddingTop() + getPaddingBottom());
 
     }
@@ -138,19 +105,10 @@ public class FlowLayout extends ViewGroup {
                 lineWidth = 0;
             }
 
-            if (childWidth == parentWidth) {
-                Log.e("FlowLayout onLayout", "onLayout : " + 1);
-                lineWidth = childWidth;
-            } else if (lineWidth + childWidth == parentWidth) {
-                lineWidth = lineWidth + childWidth;
-                Log.e("FlowLayout onLayout", "onLayout : " + 2);
-            } else {
-                lineWidth = lineWidth + childWidth + columnSpace;
-                Log.e("FlowLayout onLayout", "onLayout : " + 3);
-            }
-
+            lineWidth = lineWidth + childWidth + columnSpace;
             lineHeight = Math.max(lineHeight, childHeight);
             lineViews.add(child);
+
             if (i == childCount - 1) {
                 linesHeights.add(lineHeight);
                 linesViews.add(lineViews);
